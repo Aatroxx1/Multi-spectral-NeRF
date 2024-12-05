@@ -37,6 +37,7 @@ from nerfstudio.data.dataparsers.scannetpp_dataparser import ScanNetppDataParser
 from nerfstudio.data.dataparsers.sdfstudio_dataparser import SDFStudioDataParserConfig
 from nerfstudio.data.dataparsers.sitcoms3d_dataparser import Sitcoms3DDataParserConfig
 from nerfstudio.plugins.registry_dataparser import discover_dataparsers
+from msnerf.ms_dataparser import MSDatasetParserConfig, MSRSDataParserConfig
 
 dataparsers = {
     "nerfstudio-data": NerfstudioDataParserConfig(),
@@ -54,6 +55,8 @@ dataparsers = {
     "sitcoms3d-data": Sitcoms3DDataParserConfig(),
     "scannetpp-data": ScanNetppDataParserConfig(),
     "colmap": ColmapDataParserConfig(),
+    "msnerf-data": MSDatasetParserConfig(),
+    "ms-sr-data":MSRSDataParserConfig()
 }
 
 external_dataparsers, _ = discover_dataparsers()

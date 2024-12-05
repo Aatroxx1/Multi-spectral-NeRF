@@ -63,6 +63,9 @@ from nerfstudio.models.vanilla_nerf import NeRFModel, VanillaModelConfig
 from nerfstudio.pipelines.base_pipeline import VanillaPipelineConfig
 from nerfstudio.pipelines.dynamic_batch import DynamicBatchPipelineConfig
 from nerfstudio.plugins.registry import discover_methods
+from msnerf.ms_model import MSNerfModelConfig, MSSuperResolutionModelConfig
+from msnerf.ms_dataparser import MSDatasetParserConfig, MSRSDataParserConfig
+from msnerf.ms_datamanager import MSParallelDataManagerConfig, MSSRParallelDataManagerConfig
 
 method_configs: Dict[str, Union[TrainerConfig, ExternalMethodDummyTrainerConfig]] = {}
 descriptions = {
@@ -82,6 +85,8 @@ descriptions = {
     "neus-facto": "Implementation of NeuS-Facto. (slow)",
     "splatfacto": "Gaussian Splatting model",
     "splatfacto-big": "Larger version of Splatfacto with higher quality.",
+    "msnerf": "multi-spectral nerf by Fang Leisen",
+    "mssr": "multi-spectral nerf by Fang Leisen",
 }
 
 method_configs["nerfacto"] = TrainerConfig(
@@ -99,6 +104,7 @@ method_configs["nerfacto"] = TrainerConfig(
         model=NerfactoModelConfig(
             eval_num_rays_per_chunk=1 << 15,
             average_init_density=0.01,
+            background_color="random",
             camera_optimizer=CameraOptimizerConfig(mode="SO3xR3"),
         ),
     ),
@@ -703,10 +709,100 @@ method_configs["splatfacto-big"] = TrainerConfig(
         },
     },
     viewer=ViewerConfig(num_rays_per_chunk=1 << 15),
-    vis="viewer",
+    vis="wandb",
 )
 
+method_configs["msnerf"] = TrainerConfig(
+    method_name="msnerf",
+    steps_per_save=10000,
+    max_num_iterations=20000,
+    steps_per_eval_batch=1000,
+    steps_per_eval_image=2000,
+    steps_per_eval_all_images=10000,
+    mixed_precision=True,
+    pipeline=VanillaPipelineConfig(
+        datamanager=MSParallelDataManagerConfig(
+            dataparser=MSDatasetParserConfig(
+                num_channels=10,
+            ),
+            train_num_rays_per_batch=8192,
+            eval_num_rays_per_batch=8192,
+        ),
+        model=MSNerfModelConfig(
+            num_multispectral=9,
+            eval_num_rays_per_chunk=1 << 15,
+            num_nerf_samples_per_ray=64,
+            num_proposal_samples_per_ray=(256, 128),
+            hidden_dim=128,
+            hidden_dim_ms=128,
+            average_init_density=0.01,
+            senmantic=True,
+        ),
+    ),
+    optimizers={
+        "proposal_networks": {
+            "optimizer": AdamOptimizerConfig(lr=1e-2, eps=1e-15),
+            "scheduler": ExponentialDecaySchedulerConfig(lr_final=0.0001, max_steps=200000),
+        },
+        "fields": {
+            "optimizer": AdamOptimizerConfig(lr=1e-2, eps=1e-15),
+            "scheduler": ExponentialDecaySchedulerConfig(lr_final=0.0001, max_steps=200000),
+        },
+        "camera_opt": {
+            "optimizer": AdamOptimizerConfig(lr=1e-3, eps=1e-15),
+            "scheduler": ExponentialDecaySchedulerConfig(lr_final=1e-4, max_steps=5000),
+        },
+    },
+    viewer=ViewerConfig(num_rays_per_chunk=1 << 15),
+    vis="wandb",
+)
 
+method_configs["mssr"] = TrainerConfig(
+    method_name="mssr",
+    steps_per_save=10000,
+    max_num_iterations=20000,
+    steps_per_eval_batch=1000,
+    steps_per_eval_image=2000,
+    steps_per_eval_all_images=10000,
+    mixed_precision=True,
+    pipeline=VanillaPipelineConfig(
+        datamanager=MSSRParallelDataManagerConfig(
+            dataparser=MSRSDataParserConfig(
+                num_channels=25,
+            ),
+            train_num_rays_per_batch=8192,
+            eval_num_rays_per_batch=8192,
+        ),
+        model=MSSuperResolutionModelConfig(
+            num_multispectral=25,
+            eval_num_rays_per_chunk=1 << 15,
+            num_nerf_samples_per_ray=64,
+            num_proposal_samples_per_ray=(256, 128),
+            hidden_dim=128,
+            hidden_dim_ms=128,
+            average_init_density=0.01,
+            # senmantic=True,
+        ),
+    ),
+    optimizers={
+        "proposal_networks": {
+            "optimizer": AdamOptimizerConfig(lr=1e-2, eps=1e-15),
+            "scheduler": ExponentialDecaySchedulerConfig(lr_final=0.0001, max_steps=200000),
+        },
+        "fields": {
+            "optimizer": AdamOptimizerConfig(lr=1e-2, eps=1e-15),
+            "scheduler": ExponentialDecaySchedulerConfig(lr_final=0.0001, max_steps=200000),
+        },
+        "camera_opt": {
+            "optimizer": AdamOptimizerConfig(lr=1e-3, eps=1e-15),
+            "scheduler": ExponentialDecaySchedulerConfig(lr_final=1e-4, max_steps=5000),
+        },
+    },
+    viewer=ViewerConfig(
+        num_rays_per_chunk=1 << 15,
+    ),
+    vis="wandb",
+)
 def merge_methods(methods, method_descriptions, new_methods, new_descriptions, overwrite=True):
     """Merge new methods and descriptions into existing methods and descriptions.
     Args:

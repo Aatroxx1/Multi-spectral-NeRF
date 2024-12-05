@@ -462,6 +462,8 @@ class Viewer:
             c2w = camera.camera_to_worlds.cpu().numpy()
             R = vtf.SO3.from_matrix(c2w[:3, :3])
             R = R @ vtf.SO3.from_x_radians(np.pi)
+            if image_uint8.shape[2] == 1:
+                image_uint8 = image_uint8.repeat(3, axis=2)
             camera_handle = self.viser_server.scene.add_camera_frustum(
                 name=f"/cameras/camera_{idx:05d}",
                 fov=float(2 * np.arctan((camera.cx / camera.fx[0]).cpu())),

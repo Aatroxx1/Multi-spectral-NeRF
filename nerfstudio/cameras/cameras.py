@@ -919,6 +919,10 @@ class Cameras(TensorDataclass):
         else:
             metadata = {"directions_norm": directions_norm[0].detach()}
 
+        if self.metadata.get("num_ms", -1) != -1:
+            ms_per_row = int(self.metadata["num_ms"] ** 0.5)
+            metadata["ms_index"] = (((coords[..., 0] - 0.5) % ms_per_row) * ms_per_row + (coords[..., 1] - 0.5) % ms_per_row).unsqueeze(-1).to(torch.int64)
+
         return RayBundle(
             origins=origins,
             directions=directions,

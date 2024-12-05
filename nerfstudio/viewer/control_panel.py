@@ -80,6 +80,12 @@ class ControlPanel:
         self._colormap = ViewerDropdown[Colormaps](
             "Colormap", "default", ["default"], cb_hook=lambda _: rerender_cb(), hint="The colormap to use"
         )
+        self._channel = ViewerDropdown(
+            "Channel",
+            "1",
+            [str(i) for i in range(1, 11)],
+            cb_hook=lambda _: rerender_cb()
+        )
         self._invert = ViewerCheckbox("Invert", False, cb_hook=lambda _: rerender_cb(), hint="Invert the colormap")
         self._normalize = ViewerCheckbox(
             "Normalize", True, cb_hook=lambda _: rerender_cb(), hint="Normalize the colormap"
@@ -197,6 +203,7 @@ class ControlPanel:
             self.add_element(self._max_res)
             self.add_element(self._output_render)
             self.add_element(self._colormap)
+            self.add_element(self._channel)
             self.add_element(self._layer_depth)
             # colormap options
             self.add_element(self._invert, additional_tags=("colormap",))
@@ -278,6 +285,7 @@ class ControlPanel:
         Sets elements to be hidden or not based on the current state of the control panel
         """
         self._colormap.set_disabled(self.output_render == "rgb")
+        self._channel.set_disabled(self.output_render != "ms")
         for e in self._elements_by_tag["colormap"]:
             e.set_hidden(self.output_render == "rgb")
         for e in self._elements_by_tag["split_colormap"]:
@@ -386,6 +394,7 @@ class ControlPanel:
             colormap_min=self._min.value,
             colormap_max=self._max.value,
             invert=self._invert.value,
+            channel=int(self._channel.value)-1,
         )
 
     @property

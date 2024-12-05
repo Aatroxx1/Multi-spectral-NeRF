@@ -173,7 +173,7 @@ events.out.*
 
 # Misc
 old/
-temp*
+msnerf/data_processing/move_files.py
 !temporal*
 .nfs*
 external/
@@ -191,3 +191,4 @@ camera_paths/
 # pixi environments
 .pixi
 /third_party
+/msnerf/small_tricks/

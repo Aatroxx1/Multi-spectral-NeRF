@@ -41,6 +41,7 @@ class ColormapOptions:
     """ Maximum value for the output colormap """
     invert: bool = False
     """ Whether to invert the output colormap """
+    channel: int = 0
 
 
 def apply_colormap(
@@ -85,7 +86,10 @@ def apply_colormap(
         return apply_boolean_colormap(image)
 
     if image.shape[-1] > 3:
-        return apply_pca_colormap(image)
+        return apply_ms_colormap(image, colormap_options.channel)
+
+    if image.shape[-1] == 1 and image.dtype == torch.int64:
+        return image.squeeze().to(torch.uint8)
 
     raise NotImplementedError
 
@@ -219,3 +223,21 @@ def apply_pca_colormap(
     assert image_long_min >= 0, f"the min value is {image_long_min}"
     assert image_long_max <= 255, f"the max value is {image_long_max}"
     return image.view(*original_shape[:-1], 3)
+
+
+def apply_ms_colormap(
+image: Float[Tensor, "*bs dim"],
+channel: int
+)-> Float[Tensor, "*bs rgb=3"]:
+    original_shape = image.shape
+    image = image.view(-1, image.shape[-1])
+    # Select the specific channel
+    selected_channel = image[:, channel]  # Shape: (N,)
+    # Create an RGB image by copying the selected channel across the RGB channels
+    rgb_image = torch.zeros_like(image[:, :3])  # Initialize (N, 3) tensor for RGB
+    rgb_image[:, 0] = selected_channel  # Red channel
+    rgb_image[:, 1] = selected_channel  # Green channel
+    rgb_image[:, 2] = selected_channel  # Blue channel
+
+    # Reshape back to the original image dimensions
+    return rgb_image.view(*original_shape[:-1], 3)

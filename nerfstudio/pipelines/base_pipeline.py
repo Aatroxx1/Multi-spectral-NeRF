@@ -388,6 +388,11 @@ class VanillaPipeline(Pipeline):
                 if output_path is not None:
                     for key in image_dict.keys():
                         image = image_dict[key]  # [H, W, C] order
+                        if image.shape[-1]>4:
+                            for channel in range(image.shape[-1]):
+                                image_part = image[..., channel:channel+1]
+                                vutils.save_image(image_part.permute(2, 0, 1).cpu(), output_path / f"{image_prefix}_{key}_{idx:04d}_part{channel}.png")
+                            continue
                         vutils.save_image(
                             image.permute(2, 0, 1).cpu(), output_path / f"{image_prefix}_{key}_{idx:04d}.png"
                         )

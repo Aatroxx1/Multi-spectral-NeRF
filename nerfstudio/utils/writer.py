@@ -317,7 +317,8 @@ class WandbWriter(Writer):
 
     def write_image(self, name: str, image: Float[Tensor, "H W C"], step: int) -> None:
         import wandb  # wandb is slow to import, so we only import it if we need it.
-
+        if image.shape[-1] > 4:
+            image = image[..., :3]
         image = torch.permute(image, (2, 0, 1))
         wandb.log({name: wandb.Image(image)}, step=step)
 
