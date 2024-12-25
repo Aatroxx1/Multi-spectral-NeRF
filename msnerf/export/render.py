@@ -882,8 +882,7 @@ class DatasetRender(BaseRender):
 
                         # Save to file
                         if len(output_image.shape) == 3 and output_image.shape[2] > 4:
-                            assert output_image.shape[-1] == self.num_ms
-                            for i in range(self.num_ms):
+                            for i in range(output_image.shape[-1]):
                                 output_part_path = output_path.parent/f"part{i+1}"/output_path.stem
                                 output_part_path.parent.mkdir(exist_ok=True, parents=True)
                                 media.write_image(output_part_path.with_suffix(".png"), output_image[..., i], fmt="png")

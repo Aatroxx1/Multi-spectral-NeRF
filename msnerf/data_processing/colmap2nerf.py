@@ -70,16 +70,16 @@ def do_system(arg):
 
 
 def run_colmap(args):
-    colmap_binary = r"D:\files\PHD\myNeRF\colmap-x64-windows-cuda\COLMAP.bat"
+    colmap_binary = r"D:\files\PHD\myNeRF\COLMAP-3.7-windows-cuda\COLMAP.bat"
 
-    db = args.colmap_db
+    db = "\"" + args.colmap_db + "\""
     images = "\"" + args.images + "\""
     db_noext = str(Path(db).with_suffix(""))
 
     if args.text == "text":
         args.text = db_noext + "_text"
     text = args.text
-    sparse = db_noext + "_sparse"
+    sparse = db_noext + "_sparse" + "\""
     print(f"running colmap with:\n\tdb={db}\n\timages={images}\n\tsparse={sparse}\n\ttext={text}")
     if not args.overwrite and (
                                       input(
@@ -89,13 +89,13 @@ def run_colmap(args):
     if os.path.exists(db):
         os.remove(db)
     do_system(
-        f"{colmap_binary} feature_extractor --SiftExtraction.gpu_index 0 --ImageReader.camera_model {args.colmap_camera_model} --ImageReader.camera_params \"{args.colmap_camera_params}\" --SiftExtraction.estimate_affine_shape=true --SiftExtraction.domain_size_pooling=true --ImageReader.single_camera 1 --database_path {db} --image_path {images}")
+        f"{colmap_binary} feature_extractor --ImageReader.camera_model {args.colmap_camera_model} --ImageReader.single_camera 1 --database_path {db} --image_path {images}")
     match_cmd = f"{colmap_binary} {args.colmap_matcher}_matcher --SiftMatching.guided_matching=true --database_path {db}"
     if args.vocab_path:
         match_cmd += f" --VocabTreeMatching.vocab_tree_path {args.vocab_path}"
     do_system(match_cmd)
     try:
-        shutil.rmtree(sparse)
+        shutil.rmtree(sparse[1:-1])
     except:
         pass
     do_system(f"mkdir {sparse}")
@@ -110,7 +110,7 @@ def run_colmap(args):
     do_system(f"{colmap_binary} model_converter --input_path {sparse}/0 --output_path {text} --output_type TXT")
 
     try:
-        shutil.rmtree(sparse)
+        shutil.rmtree(sparse[1:-1])
     except:
         pass
 
@@ -397,30 +397,37 @@ def f_colmap2nerf(args):
     with open(OUT_PATH, "w") as outfile:
         json.dump(out, outfile, indent=2)
 
-    # try:
-    #     shutil.rmtree(TEXT_FOLDER)
-    #     os.remove(args.colmap_db)
-    # except:
-    #     pass
+    try:
+        shutil.rmtree(TEXT_FOLDER)
+        os.remove(args.colmap_db)
+    except:
+        pass
 
 
 if __name__ == "__main__":
-    # cvs_path = r"D:\files\PHD\myNeRF\nerfstudio\data\编号.csv"
-    # outside_dir = r"D:\files\PHD\myNeRF\nerfstudio\data"
-    # df = pd.read_csv(cvs_path)
-    # # 遍历每一行
-    # threads = []
-    # for index, row in df.iterrows():
-    #     datadir = row['new']
-    #     data_path = os.path.join(outside_dir, datadir)
-    #     args = parse_args(
-    #         ["--images", os.path.join(data_path, "images_for_sfm"), "--run_colmap", "--out", os.path.join(data_path, "transforms.json"), "--overwrite", "--colmap_db", os.path.join(data_path, "colmap.db"), "--text", "text"])
-    #     f_colmap2nerf(args)
+    cvs_path = r"D:\files\PHD\myNeRF\nerfstudio\data\编号.csv"
+    outside_dir = r"D:\files\PHD\myNeRF\nerfstudio\data"
+    df = pd.read_csv(cvs_path)
+    # 遍历每一行
+    for index, row in df.iterrows():
+        datadir = row['new']
+        data_path = os.path.join(outside_dir, datadir)
+        args = parse_args(
+            ["--images", os.path.join(data_path, "images"), "--run_colmap", "--out", os.path.join(data_path, "mssr.json"),
+             "--overwrite", "--colmap_db", os.path.join(data_path, "colmap.db"), "--text", os.path.join(data_path, 'text'), "--colmap_camera_model", "SIMPLE_PINHOLE"])
+        f_colmap2nerf(args)
 
-    data_path = r"D:\files\PHD\myNeRF\nerfstudio\data\12_0"
-    args= parse_args(
-            ["--images", os.path.join(data_path, "images_for_sfm"), "--out", os.path.join(data_path, "transforms.json"), "--overwrite", "--text", data_path])
-    f_colmap2nerf(args)
+    # data_path = r'data\01_2'
+    # args = parse_args(
+    #     ["--images", os.path.join(data_path, "images"), "--run_colmap", "--out", os.path.join(data_path, "mssr.json"),
+    #      "--overwrite", "--colmap_db", os.path.join(data_path, "colmap.db"), "--text", os.path.join(data_path, 'text'),
+    #      "--colmap_camera_model", "SIMPLE_PINHOLE"])
+    # f_colmap2nerf(args)
+
+    # data_path = r"D:\files\PHD\myNeRF\nerfstudio\data\VID20241220203642\images"
+    # args= parse_args(
+    #         ["--images", os.path.join(data_path), "--out", os.path.join(data_path, "transforms.json"), "--overwrite", "--text", data_path])
+    # f_colmap2nerf(args)
 
     # data_path = r"D:\files\PHD\myNeRF\nerfstudio\data\12_0"
     # args = parse_args(

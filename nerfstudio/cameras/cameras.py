@@ -155,6 +155,13 @@ class Cameras(TensorDataclass):
         self.camera_type = self._init_get_camera_type(camera_type)
         self.times = self._init_get_times(times)
 
+        if metadata.get('num_ms', None) is not None:
+            if isinstance(metadata['num_ms'], int):
+                metadata['num_ms'] = torch.tensor([metadata['num_ms']], device=self.device)
+            elif isinstance(metadata['num_ms'], torch.Tensor):
+                if metadata['num_ms'].ndim == 0 or metadata['num_ms'].shape[-1] != 1:
+                    metadata['num_ms'] = metadata['num_ms'].unsqueeze(-1)
+                metadata['num_ms'] = metadata['num_ms'].to(self.device)
         self.metadata = metadata
 
         self.__post_init__()  # This will do the dataclass post_init and broadcast all the tensors
@@ -919,8 +926,9 @@ class Cameras(TensorDataclass):
         else:
             metadata = {"directions_norm": directions_norm[0].detach()}
 
-        if self.metadata.get("num_ms", -1) != -1:
-            ms_per_row = int(self.metadata["num_ms"] ** 0.5)
+        if "num_ms" in self.metadata:
+            ms_per_row = (self.metadata["num_ms"] ** 0.5).to(torch.int)
+            ms_per_row = ms_per_row[camera_indices[..., 0]].squeeze()
             metadata["ms_index"] = (((coords[..., 0] - 0.5) % ms_per_row) * ms_per_row + (coords[..., 1] - 0.5) % ms_per_row).unsqueeze(-1).to(torch.int64)
 
         return RayBundle(

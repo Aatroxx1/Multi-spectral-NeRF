@@ -6,7 +6,7 @@ import torch
 from torch.nn import MSELoss
 from torch.nn import Parameter
 from torchmetrics.functional import structural_similarity_index_measure
-from torchmetrics.image import PeakSignalNoiseRatio
+from torchmetrics.image import PeakSignalNoiseRatio, SpectralAngleMapper
 
 from msnerf.ms_field import MSNerfField
 from msnerf.ms_renderer import MSRenderer, MSSRRenderer
@@ -161,6 +161,7 @@ class MSNerfModel(Model):
         self.ms_loss = MSELoss()
         self.psnr = PeakSignalNoiseRatio(data_range=1.0)
         self.ssim = structural_similarity_index_measure
+        self.sam = SpectralAngleMapper()
         # self.lpips = LearnedPerceptualImagePatchSimilarity(normalize=True)
         self.step = 0
 
@@ -332,9 +333,12 @@ class MSNerfModel(Model):
         psnr = self.psnr(gt_ms, predicted_ms)
         ssim = self.ssim(gt_ms, predicted_ms)
         # lpips = self.lpips(gt_ms, predicted_ms)
+        mse = self.ms_loss(gt_ms, predicted_ms)
+        sam = self.sam(gt_ms.permute((0, 3, 1, 2)), predicted_ms.permute((0, 3, 1, 2)))
+
 
         # all of these metrics will be logged as scalars
-        metrics_dict = {"psnr": float(psnr.item()), "ssim": float(ssim)}  # type: ignore
+        metrics_dict = {"psnr": float(psnr.item()), "ssim": float(ssim), "mse": float(mse), "sam": float(sam)}  # type: ignore
         # metrics_dict["lpips"] = float(lpips)
 
         images_dict = {"img": combined_ms, "accumulation": combined_acc, "depth": combined_depth,
@@ -662,9 +666,13 @@ class MSSuperResolutionModel(Model):
         psnr = self.psnr(gt_ms, predicted_ms)
         ssim = self.ssim(gt_ms, predicted_ms)
         # lpips = self.lpips(gt_ms, predicted_ms)
+        mse = self.ms_loss(gt_ms, predicted_ms)
+        # sam = self.sam(gt_ms.permute((0, 3, 1, 2)), predicted_ms.permute((0, 3, 1, 2)))
 
         # all of these metrics will be logged as scalars
-        metrics_dict = {"psnr": float(psnr.item()), "ssim": float(ssim)}  # type: ignore
+        metrics_dict = {"psnr": float(psnr.item()), "ssim": float(ssim), "mse": float(mse),
+                        # "sam": float(sam)
+                        }  # type: ignore
         # metrics_dict["lpips"] = float(lpips)
 
         images_dict = {"img": combined_ms, "accumulation": combined_acc, "depth": combined_depth,

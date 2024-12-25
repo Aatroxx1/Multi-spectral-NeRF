@@ -712,31 +712,29 @@ method_configs["splatfacto-big"] = TrainerConfig(
     vis="wandb",
 )
 
-method_configs["msnerf"] = TrainerConfig(
-    method_name="msnerf",
-    steps_per_save=10000,
-    max_num_iterations=20000,
-    steps_per_eval_batch=1000,
-    steps_per_eval_image=2000,
-    steps_per_eval_all_images=10000,
+method_configs["ms"] = TrainerConfig(
+    method_name="ms",
+    steps_per_save=20000,
+    max_num_iterations=20001,
+    steps_per_eval_batch=100000,
+    steps_per_eval_image=100000,
+    steps_per_eval_all_images=5000,
     mixed_precision=True,
     pipeline=VanillaPipelineConfig(
         datamanager=MSParallelDataManagerConfig(
-            dataparser=MSDatasetParserConfig(
-                num_channels=10,
-            ),
+            dataparser=MSDatasetParserConfig(),
             train_num_rays_per_batch=8192,
-            eval_num_rays_per_batch=8192,
+            eval_num_rays_per_batch=8192 * 2,
         ),
         model=MSNerfModelConfig(
-            num_multispectral=9,
+            num_multispectral=6,
             eval_num_rays_per_chunk=1 << 15,
             num_nerf_samples_per_ray=64,
             num_proposal_samples_per_ray=(256, 128),
             hidden_dim=128,
             hidden_dim_ms=128,
             average_init_density=0.01,
-            senmantic=True,
+            # senmantic=True,
         ),
     ),
     optimizers={
@@ -754,24 +752,22 @@ method_configs["msnerf"] = TrainerConfig(
         },
     },
     viewer=ViewerConfig(num_rays_per_chunk=1 << 15),
-    vis="wandb",
+    vis="viewer+wandb",
 )
 
 method_configs["mssr"] = TrainerConfig(
     method_name="mssr",
-    steps_per_save=10000,
-    max_num_iterations=20000,
-    steps_per_eval_batch=1000,
-    steps_per_eval_image=2000,
-    steps_per_eval_all_images=10000,
+    steps_per_save=20000,
+    max_num_iterations=20001,
+    steps_per_eval_batch=100000,
+    steps_per_eval_image=100000,
+    steps_per_eval_all_images=5000,
     mixed_precision=True,
     pipeline=VanillaPipelineConfig(
         datamanager=MSSRParallelDataManagerConfig(
-            dataparser=MSRSDataParserConfig(
-                num_channels=25,
-            ),
+            dataparser=MSRSDataParserConfig(),
             train_num_rays_per_batch=8192,
-            eval_num_rays_per_batch=8192,
+            eval_num_rays_per_batch=8192 * 2,
         ),
         model=MSSuperResolutionModelConfig(
             num_multispectral=25,
@@ -801,8 +797,19 @@ method_configs["mssr"] = TrainerConfig(
     viewer=ViewerConfig(
         num_rays_per_chunk=1 << 15,
     ),
-    vis="wandb",
+    vis="viewer+wandb",
 )
+method_configs["ms_50"] = method_configs["ms"]
+method_configs["ms_100"] = method_configs["ms"]
+method_configs["ms_200"] = method_configs["ms"]
+method_configs["ms_400"] = method_configs["ms"]
+method_configs["ms_600"] = method_configs["ms"]
+method_configs["mssr_50"] = method_configs["mssr"]
+method_configs["mssr_100"] = method_configs["mssr"]
+method_configs["mssr_200"] = method_configs["mssr"]
+method_configs["mssr_400"] = method_configs["mssr"]
+method_configs["mssr_600"] = method_configs["mssr"]
+
 def merge_methods(methods, method_descriptions, new_methods, new_descriptions, overwrite=True):
     """Merge new methods and descriptions into existing methods and descriptions.
     Args:

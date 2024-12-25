@@ -60,18 +60,16 @@ class MSDatasetParser(DataParser):
         cy_fixed = "cy" in meta
         height_fixed = "h" in meta
         width_fixed = "w" in meta
+        num_channels_fixed = "num_ms" in meta
         distort_fixed = False
-        for distort_key in ["k1", "k2", "k3", "p1", "p2", "distortion_params"]:
-            if distort_key in meta:
-                distort_fixed = True
-                break
-        fisheye_crop_radius = meta.get("fisheye_crop_radius", None)
+
         fx = []
         fy = []
         cx = []
         cy = []
         height = []
         width = []
+        num_channels = []
         distort = []
 
         # sort the frames by fname
@@ -105,6 +103,9 @@ class MSDatasetParser(DataParser):
             if not width_fixed:
                 assert "w" in frame, "width not specified in frame"
                 width.append(int(frame["w"]))
+            if not num_channels_fixed:
+                assert "num_ms" in frame, "num_channels not specified in frame"
+                num_channels.append(int(frame["num_channels"]))
             if not distort_fixed:
                 distort.append(
                     torch.tensor(frame["distortion_params"], dtype=torch.float32)
@@ -143,11 +144,8 @@ class MSDatasetParser(DataParser):
         else:
             raise ValueError(f"Unknown dataparser split {split}")
 
-        if "orientation_override" in meta:
-            orientation_method = meta["orientation_override"]
-            CONSOLE.log(f"[yellow] Dataset is overriding orientation method to {orientation_method}")
-        else:
-            orientation_method = self.config.orientation_method
+
+        orientation_method = self.config.orientation_method
 
         poses = torch.from_numpy(np.array(poses).astype(np.float32))
         poses, transform_matrix = camera_utils.auto_orient_and_center_poses(
@@ -189,6 +187,7 @@ class MSDatasetParser(DataParser):
         cy = float(meta["cy"]) if cy_fixed else torch.tensor(cy, dtype=torch.float32)[idx_tensor]
         height = int(meta["h"]) if height_fixed else torch.tensor(height, dtype=torch.int32)[idx_tensor]
         width = int(meta["w"]) if width_fixed else torch.tensor(width, dtype=torch.int32)[idx_tensor]
+        num_channels = int(meta["num_ms"]) if num_channels_fixed else torch.tensor(num_channels, dtype=torch.int32)[idx_tensor]
         if distort_fixed:
             distortion_params = (
                 torch.tensor(meta["distortion_params"], dtype=torch.float32)
@@ -205,11 +204,7 @@ class MSDatasetParser(DataParser):
         else:
             distortion_params = torch.stack(distort, dim=0)[idx_tensor]
 
-        # Only add fisheye crop radius parameter if the images are actually fisheye, to allow the same config to be used
-        # for both fisheye and non-fisheye datasets.
-        metadata = {}
-        if (camera_type in [CameraType.FISHEYE, CameraType.FISHEYE624]) and (fisheye_crop_radius is not None):
-            metadata["fisheye_crop_radius"] = fisheye_crop_radius
+        metadata = {"num_ms": num_channels}
 
         cameras = Cameras(
             fx=fx,
@@ -229,13 +224,7 @@ class MSDatasetParser(DataParser):
             cameras=cameras,
             scene_box=scene_box,
             mask_filenames=mask_filenames if len(mask_filenames) > 0 else None,
-            metadata={
-                "depth_filenames": depth_filenames if len(depth_filenames) > 0 else None,
-                "depth_unit_scale_factor": self.config.depth_unit_scale_factor,
-                "mask_color": self.config.mask_color,
-                "channel_num": self.config.num_channels,
-                # **metadata,
-            },
+            metadata={},
         )
         return dataparser_outputs
 
@@ -278,18 +267,16 @@ class MSRSDatasetParser(DataParser):
         cy_fixed = "cy" in meta
         height_fixed = "h" in meta
         width_fixed = "w" in meta
+        num_channels_fixed = "num_ms" in meta
         distort_fixed = False
-        for distort_key in ["k1", "k2", "k3", "p1", "p2", "distortion_params"]:
-            if distort_key in meta:
-                distort_fixed = True
-                break
-        fisheye_crop_radius = meta.get("fisheye_crop_radius", None)
+
         fx = []
         fy = []
         cx = []
         cy = []
         height = []
         width = []
+        num_channels = []
         distort = []
 
         # sort the frames by fname
@@ -323,6 +310,9 @@ class MSRSDatasetParser(DataParser):
             if not width_fixed:
                 assert "w" in frame, "width not specified in frame"
                 width.append(int(frame["w"]))
+            if not num_channels_fixed:
+                assert "num_ms" in frame, "num_channels not specified in frame"
+                num_channels.append(int(frame["num_channels"]))
             if not distort_fixed:
                 distort.append(
                     torch.tensor(frame["distortion_params"], dtype=torch.float32)
@@ -361,11 +351,8 @@ class MSRSDatasetParser(DataParser):
         else:
             raise ValueError(f"Unknown dataparser split {split}")
 
-        if "orientation_override" in meta:
-            orientation_method = meta["orientation_override"]
-            CONSOLE.log(f"[yellow] Dataset is overriding orientation method to {orientation_method}")
-        else:
-            orientation_method = self.config.orientation_method
+
+        orientation_method = self.config.orientation_method
 
         poses = torch.from_numpy(np.array(poses).astype(np.float32))
         poses, transform_matrix = camera_utils.auto_orient_and_center_poses(
@@ -407,6 +394,7 @@ class MSRSDatasetParser(DataParser):
         cy = float(meta["cy"]) if cy_fixed else torch.tensor(cy, dtype=torch.float32)[idx_tensor]
         height = int(meta["h"]) if height_fixed else torch.tensor(height, dtype=torch.int32)[idx_tensor]
         width = int(meta["w"]) if width_fixed else torch.tensor(width, dtype=torch.int32)[idx_tensor]
+        num_channels = int(meta["num_ms"]) if num_channels_fixed else torch.tensor(num_channels, dtype=torch.int32)[idx_tensor]
         if distort_fixed:
             distortion_params = (
                 torch.tensor(meta["distortion_params"], dtype=torch.float32)
@@ -423,13 +411,7 @@ class MSRSDatasetParser(DataParser):
         else:
             distortion_params = torch.stack(distort, dim=0)[idx_tensor]
 
-        # Only add fisheye crop radius parameter if the images are actually fisheye, to allow the same config to be used
-        # for both fisheye and non-fisheye datasets.
-        metadata = {}
-        if (camera_type in [CameraType.FISHEYE, CameraType.FISHEYE624]) and (fisheye_crop_radius is not None):
-            metadata["fisheye_crop_radius"] = fisheye_crop_radius
-
-        metadata["num_ms"] = self.config.num_channels
+        metadata = {"num_ms": num_channels}
 
         cameras = Cameras(
             fx=fx,
@@ -449,12 +431,6 @@ class MSRSDatasetParser(DataParser):
             cameras=cameras,
             scene_box=scene_box,
             mask_filenames=mask_filenames if len(mask_filenames) > 0 else None,
-            metadata={
-                "depth_filenames": depth_filenames if len(depth_filenames) > 0 else None,
-                "depth_unit_scale_factor": self.config.depth_unit_scale_factor,
-                "mask_color": self.config.mask_color,
-                "channel_num": self.config.num_channels,
-                # **metadata,
-            },
+            metadata={},
         )
         return dataparser_outputs
